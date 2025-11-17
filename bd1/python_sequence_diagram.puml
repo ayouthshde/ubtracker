@@ -1,0 +1,51 @@
+@startuml Python Route Finder - API Request Flow
+
+actor User
+participant "Web Browser" as Browser
+participant "Flask API" as API
+participant "Snap" as Snap
+participant "Graph" as Graph
+participant "Dijkstra" as Algo
+database "roads_clean.gpkg" as DB
+
+User -> Browser: Click on map\n(select start & end)
+Browser -> API: GET /route/shortest\n?src=47.92,106.92&dst=47.91,106.93
+
+activate API
+API -> Snap: find_nearest_node(graph, lat, lng)
+activate Snap
+Snap -> Graph: iterate all nodes
+Snap --> API: start_node_id
+deactivate Snap
+
+API -> Snap: find_nearest_node(graph, lat, lng)
+activate Snap
+Snap -> Graph: iterate all nodes
+Snap --> API: end_node_id
+deactivate Snap
+
+API -> Algo: dijkstra(graph.adj, start, end)
+activate Algo
+Algo -> Graph: get_neighbors(node)
+loop Dijkstra iteration
+    Algo -> Graph: get_neighbors(current_node)
+    Graph --> Algo: list of (neighbor, weight)
+end
+Algo --> API: (path, distance)
+deactivate Algo
+
+API -> Snap: node_to_latlon(graph, node_id)
+activate Snap
+loop for each node in path
+    Snap -> Graph: get_node(node_id)
+    Snap --> API: (lat, lon)
+end
+deactivate Snap
+
+API --> Browser: JSON response\n{path: [[lat,lng],...], distance_m: 1234}
+deactivate API
+
+Browser -> Browser: Draw route on map
+Browser --> User: Display route
+
+@enduml

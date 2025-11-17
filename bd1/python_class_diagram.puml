@@ -1,0 +1,73 @@
+@startuml Python Route Finder - Class Diagram
+
+' Styles
+skinparam classAttributeIconSize 0
+skinparam monochrome false
+skinparam shadowing false
+
+package "Graph Structure" {
+    class Node {
+        +x: float
+        +y: float
+        +__hash__()
+        +__eq__(other)
+    }
+
+    class Graph {
+        -adj: defaultdict
+        -node_map: dict
+        -node_of: list
+        -next_id: int
+        +add_node(x, y): int
+        +add_edge(from_id, to_id, weight)
+        +get_neighbors(node_id): list
+        +node_count(): int
+        +edge_count(): int
+    }
+
+    class Edge {
+        +to: int
+        +weight: float
+    }
+
+    Graph o-- Node : contains
+    Graph o-- Edge : contains
+}
+
+package "Algorithms" {
+    class Algorithms <<module>> {
+        +bfs(graph_adj, start, goal): list
+        +dfs(graph_adj, start, goal, max_paths, max_depth): list
+        +dijkstra(graph_adj, start, goal): tuple
+    }
+}
+
+package "Utilities" {
+    class Snap <<module>> {
+        +find_nearest_node(graph, lat, lng): int
+        +node_to_latlon(graph, node_id): tuple
+    }
+
+    class RoadLoader <<module>> {
+        +build_graph(roads_gdf, use_time_weight): Graph
+    }
+}
+
+package "API Server" {
+    class FlaskAPI <<Flask>> {
+        -graph_distance: Graph
+        -graph_time: Graph
+        +load_graph()
+        +route_shortest()
+        +route_fastest()
+        +route_fewest_steps()
+        +route_all()
+    }
+}
+
+FlaskAPI --> Graph : uses
+FlaskAPI --> Algorithms : calls
+FlaskAPI --> Snap : calls
+RoadLoader --> Graph : creates
+
+@enduml

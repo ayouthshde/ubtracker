@@ -1,0 +1,86 @@
+@startuml Python Route Finder - Architecture
+
+!define RECTANGLE class
+
+skinparam componentStyle rectangle
+
+' Frontend
+package "Web Frontend" {
+    [Leaflet Map] as Map
+    [HTML/CSS/JS] as Frontend
+}
+
+' Backend
+package "Flask Backend" {
+    [Flask API Server] as API
+    [Route Endpoints] as Routes
+}
+
+' Core Logic
+package "Graph Processing" {
+    [Graph Builder] as Builder
+    [BFS Algorithm] as BFS
+    [DFS Algorithm] as DFS
+    [Dijkstra Algorithm] as Dijkstra
+}
+
+package "Utilities" {
+    [Coordinate Snapping] as Snap
+    [Projection Transform] as Proj
+}
+
+' Data
+database "GeoPackage" as GPKG {
+    [roads_clean.gpkg]
+}
+
+' Dependencies
+package "External Libraries" {
+    [GeoPandas] as GP
+    [Shapely] as Shapely
+    [PyProj] as PyProj
+}
+
+' Connections
+Frontend --> Routes : HTTP/JSON
+Routes --> API : calls
+API --> BFS : uses
+API --> DFS : uses
+API --> Dijkstra : uses
+API --> Snap : uses
+
+Builder --> GPKG : reads
+Builder --> GP : uses
+Builder --> Shapely : uses
+
+Snap --> Proj : uses
+Proj --> PyProj : uses
+
+note right of API
+  **Endpoints:**
+  • /route/shortest (Dijkstra)
+  • /route/fastest (Dijkstra + time)
+  • /route/fewest-steps (BFS)
+  • /route/all (DFS)
+end note
+
+note bottom of GPKG
+  **Contents:**
+  • 178,370 nodes
+  • 366,642 edges
+  • Speed data
+  • One-way info
+end note
+
+@enduml
+```
+
+---
+
+## 🚀 **Diagram үүсгэх:**
+
+### **Option 1: Online (Хурдан)**
+
+1. **PlantUML Online Editor руу оч:**
+```
+   https://www.plantuml.com/plantuml/uml/

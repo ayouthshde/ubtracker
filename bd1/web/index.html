@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UB Route Finder - Modern UI</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      height: 100vh;
+      background: #0f141a;
+      color: #ecf0f1;
+      overflow: hidden;
+    }
+
+    /* ---------------- HEADER -------------------- */
+    header {
+      background: linear-gradient(90deg, #1f2a35, #0f4c75);
+      padding: 1.2rem 2rem;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.3);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    header h1 {
+      font-size: 1.7rem;
+      font-weight: 700;
+    }
+
+    header p {
+      color: #d0d7de;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+
+    /* ---------------- LAYOUT -------------------- */
+    main {
+      display: flex;
+      height: calc(100vh - 90px);
+      position: relative;
+    }
+
+    #map {
+      height: 100%;
+      width: 100%;
+      z-index: 1;
+    }
+
+    /* ---------------- SIDEBAR FLOATING CARD -------------------- */
+    .sidebar {
+      width: 330px;
+      position: absolute;
+      right: 25px;
+      top: 25px;
+      z-index: 10;
+
+      backdrop-filter: blur(16px);
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      padding: 1.5rem;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      color: #fff;
+
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .section {
+      background: rgba(0,0,0,0.25);
+      padding: 1rem;
+      border-radius: 12px;
+      margin-bottom: 1.2rem;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .section h2 {
+      font-size: 1rem;
+      margin-bottom: 0.8rem;
+      font-weight: 700;
+      opacity: 0.9;
+    }
+
+    .instructions {
+      font-size: 0.9rem;
+      opacity: 0.85;
+      line-height: 1.5;
+    }
+
+    /* ---------------- BUTTONS -------------------- */
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+
+    button {
+      padding: 0.85rem 1rem;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+      background: #3498db;
+      color: white;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+    }
+
+    .btn-bfs { background: #27ae60; }
+    .btn-dfs { background: #e74c3c; }
+    .btn-clear { background: #95a5a6; }
+
+    /* ---------------- INFO BOX -------------------- */
+    #info {
+      background: rgba(255,255,255,0.15);
+      padding: 0.9rem;
+      border-radius: 8px;
+      border-left: 4px solid #f1c40f;
+      min-height: 3rem;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+    }
+
+    /* ---------------- LEGEND -------------------- */
+    .legend {
+      font-size: 0.85rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .legend-color {
+      width: 22px;
+      height: 4px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <h1>Зам Ологч — UB Route Finder</h1>
+    <p>BFS • DFS • Dijkstra</p>
+  </header>
+
+  <!-- PAGE CONTENT -->
+  <main>
+    <div id="map"></div>
+
+    <!-- FLOATING SIDEBAR -->
+    <div class="sidebar">
+
+      <div class="section">
+        <h2> Заавар</h2>
+        <div class="instructions">
+          <ol>
+            <li>Газрын зураг дээр дарж эхний цэгийг сонго</li>
+            <li>Дахин дарж эцсийн цэгийг сонго</li>
+            <li>Дараа нь алгоритмаа сонгоно</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>⚙ Алгоритмууд</h2>
+        <div class="btn-group">
+          <button id="btn-dijkstra"> Dijkstra (Shortest Path)</button>
+          <button id="btn-bfs" class="btn-bfs"> BFS (Fewest Steps)</button>
+          <button id="btn-dfs" class="btn-dfs"> DFS (All Paths)</button>
+          <button id="btn-clear" class="btn-clear">🗑 Цэвэрлэх</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2> Үр дүн</h2>
+        <div id="info"></div>
+      </div>
+
+      <div class="section">
+        <h2> Шугамны Тайлбар</h2>
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-color" style="background:#3498db;"></div> Dijkstra
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background:#27ae60;"></div> BFS
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background:#e74c3c; opacity:0.6;"></div> DFS Paths
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    /* ---------------- MAP INIT ---------------- */
+    const map = L.map('map').setView([47.918, 106.917], 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    /* CUSTOM MARKERS */
+    const startIcon = L.icon({
+      iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+      iconSize: [40, 40],
+      iconAnchor: [20, 40]
+    });
+
+    const endIcon = L.icon({
+      iconUrl: "https://cdn-icons-png.flaticon.com/512/149/149060.png",
+      iconSize: [40, 40],
+      iconAnchor: [20, 40]
+    });
+
+    let startMarker = null;
+    let endMarker = null;
+    let currentLines = [];
+
+    function clearLines() {
+      currentLines.forEach(line => line.remove());
+      currentLines = [];
+    }
+
+    function clearAll() {
+      if (startMarker) startMarker.remove();
+      if (endMarker) endMarker.remove();
+      startMarker = null;
+      endMarker = null;
+      clearLines();
+      document.getElementById("info").textContent = "";
+    }
+
+    map.on("click", (e) => {
+      if (!startMarker) {
+        startMarker = L.marker(e.latlng, { icon: startIcon }).addTo(map);
+      } else if (!endMarker) {
+        endMarker = L.marker(e.latlng, { icon: endIcon }).addTo(map);
+      } else {
+        clearAll();
+      }
+    });
+
+    /* ---------------- API CALL ---------------- */
+    async function calculateRoute(alg) {
+      if (!startMarker || !endMarker) return alert("Та эхлэл ба төгсгөлийн цэгээ сонгоно уу.");
+
+      let s = startMarker.getLatLng();
+      let e = endMarker.getLatLng();
+      let src = `${s.lat},${s.lng}`;
+      let dst = `${e.lat},${e.lng}`;
+
+      clearLines();
+      const info = document.getElementById("info");
+      info.textContent = " Тооцоолж байна...";
+
+      let url =
+        alg === "dijkstra" ? `/route/shortest?src=${src}&dst=${dst}` :
+        alg === "bfs"      ? `/route/fewest-steps?src=${src}&dst=${dst}` :
+                             `/route/all?src=${src}&dst=${dst}&max_paths=10&max_depth=40`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.error) return info.textContent = " " + data.error;
+        if (data.found === false) return info.textContent = "⚠ Зам олдсонгүй.";
+
+        /* ---------------- DFS MULTIPLE PATHS ---------------- */
+        if (alg === "dfs") {
+          data.paths.forEach((p, i) => {
+            let opacity = 0.25 + (0.5 * (i / data.paths.length));
+            let line = L.polyline(p, {
+              color: "#e74c3c",
+              weight: 3,
+              opacity: opacity
+            }).addTo(map);
+            currentLines.push(line);
+          });
+          if (currentLines.length > 0) map.fitBounds(currentLines[0].getBounds());
+          info.textContent = ` DFS: ${data.count} зам олдлоо`;
+          return;
+        }
+
+        /* ---------------- BFS / DIJKSTRA SINGLE PATH ---------------- */
+        let color = alg === "dijkstra" ? "#3498db" : "#27ae60";
+        let line = L.polyline(data.path, {
+          color: color,
+          weight: 4,
+          opacity: 0.9
+        }).addTo(map);
+        currentLines.push(line);
+        map.fitBounds(line.getBounds());
+
+        let msg = `${data.algorithm}: ${data.steps} алхам`;
+        if (data.distance_m) msg += ` • ${(data.distance_m / 1000).toFixed(2)} км`;
+        info.textContent = "✓ " + msg;
+
+      } catch (err) {
+        info.textContent = " Алдаа: " + err.message;
+      }
+    }
+
+    document.getElementById("btn-dijkstra").onclick = () => calculateRoute("dijkstra");
+    document.getElementById("btn-bfs").onclick      = () => calculateRoute("bfs");
+    document.getElementById("btn-dfs").onclick      = () => calculateRoute("dfs");
+    document.getElementById("btn-clear").onclick    = clearAll;
+  </script>
+</body>
+</html>
